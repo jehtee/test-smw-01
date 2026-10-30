@@ -13,3 +13,7 @@ Small, self-contained scripts that each demonstrate one idea. Every demo lives i
 3. Add a row to the table above.
 
 Each demo keeps its own `requirements.txt`, since demos need different libraries.
+
+## Tools
+
+[`tools/lab`](tools/lab) starts long jobs on a lab machine and shows what is running. `lab start` checks that a job is actually running before it returns, and `lab status` shows every job as running, done, FAILED or LOST, plus any problem lines in its log. Run `tools/lab` with no arguments for usage.
