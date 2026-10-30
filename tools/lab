@@ -3,17 +3,18 @@
 #
 #   lab start NAME 'COMMAND' [--progress 'CMD']   start in the background, in the
 #                                                 current folder, then check it is running
-#   lab status                                    every job, and other model processes
-#   lab status NAME                               one job: its progress, problems, last lines
+#   lab status                                    every job in a sentence, and memory use
+#   lab status NAME                               one job: working, finished or failed,
+#                                                 its steps, what went wrong, what to do next
 #   lab log NAME [LINES]                          the end of a job's log
 #   lab stop NAME                                 stop a job and everything it started
 #
-# A job's state is one of: running, done, FAILED (exit code), stopped, or LOST
-# (no longer running but never recorded an exit: killed or the machine restarted).
+# A job is WORKING, FINISHED, FAILED, STOPPED (by hand) or DIED (no longer
+# running but never finished: killed, or the machine restarted).
 # Jobs are kept in ~/lab-jobs/NAME/ (cmd, dir, pid, started, exit, log).
 J="${LAB_JOBS:-$HOME/lab-jobs}"
 CHECK="${LAB_CHECK:-15}"   # seconds to watch a new job before saying it started
-PROBLEMS='^!!!|Traceback|Error|error:|Killed|No such file|command not found'
+PROBLEMS='^!!!|Traceback|Error|error:|Killed|No such file|command not found|too few|Nothing published'
 
 die() { echo "lab: $*" >&2; exit 1; }
 alive() { [ -f "$1/pid" ] && kill -0 "$(cat "$1/pid")" 2>/dev/null; }
@@ -23,10 +24,6 @@ state() {
   elif alive "$1"; then echo running
   else echo LOST
   fi
-}
-elapsed() {
-  local s; s=$(( ${2:-$(date +%s)} - $(cat "$1/started") ))
-  printf "%d:%02d" $((s / 3600)) $((s % 3600 / 60))
 }
 ended() { [ -f "$1/exit" ] && stat -f %m "$1/exit"; }
 lastline() { grep -av '^[[:space:]]*$' "$1/log" 2>/dev/null | tail -n 1 | tr -d '\r' | cut -c1-70; }
@@ -58,45 +55,74 @@ start() {
   esac
 }
 
+dur() {  # seconds -> "1 h 20 min" / "12 min"
+  local m=$(( $1 / 60 )); [ $m -ge 60 ] && echo "$((m / 60)) h $((m % 60)) min" || echo "$m min"
+}
+took() { dur $(( ${2:-$(date +%s)} - $(cat "$1/started") )); }
+at() { date -r "$1" "+%H:%M"; }
+# The job's own plain-words step (first line of its progress command), if it has one
+step() { [ -f "$1/progress" ] && (cd "$(cat "$1/dir")" && bash -c "$(cat "$1/progress")") 2>/dev/null | head -n 1; }
+# One sentence: is it working, finished or failed, and since when
+headline() {
+  local d="$1" st e; st=$(state "$d"); e=$(ended "$d")
+  case "$st" in
+    running) echo "WORKING, for $(took "$d") so far." ;;
+    done)    echo "FINISHED without errors at $(at "$e"), after $(took "$d" "$e")." ;;
+    stopped) echo "STOPPED by hand at $(at "$e"), after $(took "$d" "$e")." ;;
+    LOST)    echo "DIED: it is no longer running and never finished (killed, or the machine restarted)." ;;
+    *)       echo "FAILED at $(at "$e"), after $(took "$d" "$e")." ;;
+  esac
+}
+
 status_all() {
   local d n=0
-  printf "%-14s %-12s %-12s %-8s %s\n" JOB STATE STARTED TIME "LAST LINE"
   for d in "$J"/*/; do
     [ -f "$d/started" ] || continue
     d="${d%/}"; n=$((n + 1))
-    local st p; st=$(state "$d"); p=$(problems "$d")
-    printf "%-14s %-12s %-12s %-8s %s\n" "$(basename "$d")" "$st" \
-      "$(date -r "$(cat "$d/started")" "+%m-%d %H:%M")" "$(elapsed "$d" "$(ended "$d")")" "$(lastline "$d")"
-    [ "${p:-0}" -gt 0 ] && echo "               ^ $p problem line(s): lab status $(basename "$d")"
+    local p st; p=$(problems "$d"); st=$(state "$d")
+    echo "$(basename "$d"): $(headline "$d")"
+    if [ "$st" = running ]; then
+      local w; w=$(step "$d"); echo "    ${w:-Last line: $(lastline "$d")}"
+      [ "${p:-0}" -gt 0 ] && echo "    Something went wrong along the way: lab status $(basename "$d")"
+    elif [ "$st" != done ]; then
+      echo "    What went wrong: $(grep -aE "$PROBLEMS" "$d/log" | tail -n 1 | cut -c1-90)"
+    fi
   done
-  [ $n = 0 ] && echo "(no jobs)"
+  [ $n = 0 ] && echo "No jobs."
   echo
-  echo "Model processes (python, mlx_lm, ollama; small python ones left out):"
+  echo "Using memory:"
   ps -axo pid=,rss=,etime=,command= | awk '
     { c=$4; sub(".*/","",c) }
     c !~ /^(python[0-9.]*|mlx_lm.*|ollama.*)$/ { next }
     { prog=c; m=""
       if (c ~ /^python/) { prog=$5; if (prog=="-m" || prog=="-I") prog=$6; sub(".*/","",prog) }
-      for (i=5;i<=NF;i++) if ($i=="--model") m=$(i+1)
+      for (i=5;i<=NF;i++) if ($i=="--model") { m=$(i+1); sub(".*/","",m) }
       if (prog !~ /mlx_lm|ollama/ && $2 < 524288) next
-      n++; printf "  %6s  %5.1f GB  up %-11s %s %s\n", $1, $2/1048576, $3, prog, m }
-    END { if (!n) print "  (none)" }'
-  echo
-  echo "Memory: $(memory_pressure 2>/dev/null | tail -n 1 | sed 's/System-wide memory free percentage/free/')"
+      n++; printf "  %5.1f GB  %s%s\n", $2/1048576, prog, (m ? "  (" m ")" : "") }
+    END { if (!n) print "  no model processes" }'
+  echo "  $(memory_pressure 2>/dev/null | tail -n 1 | sed 's/.*: //') of memory free"
 }
 
 status_one() {
   local d="$J/$1"; [ -f "$d/started" ] || die "no job called $1"
-  echo "$1: $(state "$d"), started $(date -r "$(cat "$d/started")" "+%a %d %b %H:%M"), $(elapsed "$d" "$(ended "$d")")"
-  echo "  in $(cat "$d/dir")"
-  echo "  ran: $(cat "$d/cmd")"
+  local st p; st=$(state "$d"); p=$(problems "$d")
+  echo "$1 is $(headline "$d")"
+  echo "  (started $(date -r "$(cat "$d/started")" "+%a %d %b at %H:%M"))"
   if [ -f "$d/progress" ]; then
-    echo; echo "-- progress"; (cd "$(cat "$d/dir")" && bash -c "$(cat "$d/progress")") 2>&1
+    echo; (cd "$(cat "$d/dir")" && bash -c "$(cat "$d/progress")") 2>&1
   fi
-  if [ "$(problems "$d")" -gt 0 ]; then
-    echo; echo "-- problems"; grep -aE "$PROBLEMS" "$d/log" | tail -n 10
+  if [ "${p:-0}" -gt 0 ]; then
+    echo; echo "What went wrong:"; grep -aE "$PROBLEMS" "$d/log" | tail -n 5 | cut -c1-200 | sed 's/^/  /'
   fi
-  echo; echo "-- last lines"; grep -av '^[[:space:]]*$' "$d/log" | tail -n 8
+  echo
+  case "$st" in
+    running) [ "${p:-0}" -gt 0 ] && echo "Next: it is still going, but paste this to Claude." \
+               || echo "Next: nothing to do. Check back later." ;;
+    done)    echo "Next: tell Claude it finished, and copy the results back." ;;
+    stopped) echo "Next: nothing; it was stopped by hand." ;;
+    *)       echo "Next: paste this to Claude."; echo; echo "Last lines of its log:"
+             grep -av '^[[:space:]]*$' "$d/log" | tail -n 8 | cut -c1-200 | sed 's/^/  /' ;;
+  esac
 }
 
 stop() {
@@ -113,5 +139,5 @@ case "$1" in
   status) [ -n "$2" ] && status_one "$2" || status_all ;;
   log)    [ -f "$J/$2/log" ] || die "no job called $2"; tail -n "${3:-40}" "$J/$2/log" ;;
   stop)   stop "$2" ;;
-  *)      sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *)      sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
