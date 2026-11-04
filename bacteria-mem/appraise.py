@@ -329,7 +329,7 @@ def main():
             with open(path) as fh:
                 pairs = [tuple(json.loads(l)) for l in fh if l.strip()]
             print(f"  {name}: reusing {len(pairs)} from an earlier run", flush=True)
-        if len(pairs) < args.min:
+        if len(pairs) < max(args.min, args.cap or 0):
             have = {a for _, a in pairs}
             pairs = (pairs + [p for p in make() if p[1] not in have])[:args.n]
             with open(path + ".tmp", "w") as fh:
