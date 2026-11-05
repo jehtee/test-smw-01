@@ -12,6 +12,8 @@
 # from scratch), and a Homer counts as scored only once every situation is.
 #   CALIBRATE_ONLY=1 ./run_r2.sh     # stop after calibration
 #   SEEDS="0 1 2" ./run_r2.sh        # repeat runs
+#   JUDGE_ON=CMD JUDGE_OFF=CMD       # run around each appraisal, for a machine that can't hold
+#                                    # the judge and a training Homer at once (Hudsonbot, 64 GB)
 cd "$(dirname "$0")" || exit 1
 source ~/venvs/bmem/bin/activate || { echo "!!! no venv at ~/venvs/bmem"; exit 1; }
 URL="${URL:-http://127.0.0.1:8080/v1}"
@@ -25,6 +27,14 @@ mlx_lm.lora --help 2>/dev/null | grep -q -- --mask-prompt || { echo "!!! mlx_lm.
 MASK="--mask-prompt"
 FAILS=0
 fail() { echo "!!! $*  $(date)"; FAILS=$((FAILS + 1)); }
+
+appraise() {  # out_dir appraise.py args: skipped if $JUDGE already made it; the judge is up only meanwhile
+  local out=$1 r; shift
+  grep -qF "\"$JUDGE\"" "$out/balance.json" 2>/dev/null && return 0
+  eval "${JUDGE_ON:-true}" || { echo "judge would not start"; return 1; }
+  python appraise.py "$@" --out "$out" --judge-url "$URL" --judge-model "$JUDGE"; r=$?
+  eval "${JUDGE_OFF:-true}"; return $r
+}
 
 train() {  # model data_dir out_dir seed [resume_file]
   [ -f "$3/DONE" ] && { echo "have $3"; return 0; }
@@ -94,8 +104,7 @@ for m in $MODELS; do
   fi
   for s in $SEEDS; do
     D="r2_data/$tag/s$s"
-    grep -qF "\"$JUDGE\"" "$D/balance.json" 2>/dev/null || python appraise.py --model "$m" --adapter "$A/rearing" \
-      --seed "$s" --out "$D" --judge-url "$URL" --judge-model "$JUDGE" || { fail "appraisal for $m seed $s"; continue; }
+    appraise "$D" --model "$m" --adapter "$A/rearing" --seed "$s" || { fail "appraisal for $m seed $s"; continue; }
     for set in $SETS; do
       consolidate "$m" "$D/$set" "$A/s$s/$set" "$s" "$A/rearing/adapters.safetensors"
     done
@@ -104,16 +113,14 @@ for m in $MODELS; do
     for e in E3 E5; do
       H="$A/s$s/appraisal_$e"; D9="$D/step9_$e"
       [ -f "$H/DONE" ] || { fail "step 9 for $e seed $s: no appraisal Homer"; continue; }
-      grep -qF "\"$JUDGE\"" "$D9/balance.json" 2>/dev/null || python appraise.py --model "$m" --adapter "$H" \
-        --seed "$s" --out "$D9" --step9 "$e" --judge-url "$URL" --judge-model "$JUDGE" || { fail "step 9 appraisal for $e seed $s"; continue; }
+      appraise "$D9" --model "$m" --adapter "$H" --seed "$s" --step9 "$e" || { fail "step 9 appraisal for $e seed $s"; continue; }
       for set in "repair_$e" "again_$e"; do
         consolidate "$m" "$D9/$set" "$A/s$s/$set" "$s" "$H/adapters.safetensors"
       done
     done
     # Herb: E3 and E5 on his own rearing, at Homer's N
     DH="$D/herb"
-    if grep -qF "\"$JUDGE\"" "$DH/balance.json" 2>/dev/null || python appraise.py --model "$m" --adapter "$A/rearing_herb" \
-        --seed "$s" --out "$DH" --events E3,E5 --cap "$N" --judge-url "$URL" --judge-model "$JUDGE"; then
+    if appraise "$DH" --model "$m" --adapter "$A/rearing_herb" --seed "$s" --events E3,E5 --cap "$N"; then
       for e in E3 E5; do
         consolidate "$m" "$DH/appraisal_$e" "$A/s$s/herb_appraisal_$e" "$s" "$A/rearing_herb/adapters.safetensors"
       done
@@ -124,8 +131,7 @@ for m in $MODELS; do
     for e in E3 E4; do
       H="$A/s$s/appraisal_$e"; DC="$D/contrary_$e"
       [ -f "$H/DONE" ] || { fail "claim 5 for $e seed $s: no appraisal Homer"; continue; }
-      grep -qF "\"$JUDGE\"" "$DC/balance.json" 2>/dev/null || python appraise.py --model "$m" --adapter "$H" \
-        --seed "$s" --out "$DC" --contrary "$e" --cap "$N" --judge-url "$URL" --judge-model "$JUDGE" || { fail "claim 5 appraisal for $e seed $s"; continue; }
+      appraise "$DC" --model "$m" --adapter "$H" --seed "$s" --contrary "$e" --cap "$N" || { fail "claim 5 appraisal for $e seed $s"; continue; }
       consolidate "$m" "$DC/contrary_$e" "$A/s$s/contrary_$e" "$s" "$H/adapters.safetensors"
     done
   done
