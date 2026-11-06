@@ -57,4 +57,4 @@ Two findings shaped round 2:
 
 ## Round 2: Homer's own appraisal
 
-In progress. Output so far for the 4B, from before Herb and E6 (archived, not comparable with later runs): [summary.txt](archive/round2-pre-herb/results_r2/Qwen3.5-4B-4bit/summary.txt).
+In progress.

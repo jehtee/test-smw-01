@@ -1,12 +1,14 @@
-# Test Conditions for Bacterial-Level Conscious Memory
+# Simulating a Subjective Model of the World 01
+
+Repo: <https://github.com/jehtee/test-smw-01/tree/main>
 
 This is guerrilla exploration: make a thing, poke it, see what happens.
 
 ## Claim
 
-I believe consciousness requires a subjective world model, which is shaped by what events mean to the agent, not only by perceived event facts. So, simulating a subjective world model keeps open a path toward simulating the dynamics of consciousness.  A simulated subjective world model shows three signatures:
+I believe consciousness requires a subjective world model (SWM) where SWMs are constructed from the meanings of events to the agent, more than from the facts of events.  So in an experiment, if we can isolate meanings of events, as differentiated from facts of events, and use them to simulate a SWM, we can validate a plausible case for simulating consciousness.  Such an SWM presents three signatures:
 
-- Meaning, not facts, durably impacts the model, and the same outcome with different meanings has different impacts
+- Meanings, not facts, durably impact the model, and the same event outcomes with different meanings have different impacts
 - Impacts propagate by implications, not frequency or linguistic similarity
 - Impacts outlast facts, persisting after perceived event facts can no longer be recalled
 
@@ -53,7 +55,7 @@ Five claims, each of which can fail. Claims 1–3 test the three signatures, cla
 
 1. **Appraisal: meaning, not facts.** Homer works out what the event means himself. We don't supply the meaning, in training or in how we describe the event.
    - Events with the same outcome but different meanings must leave different changes: a betrayal, against the same loss by misfortune or by a near-stranger.
-   - Given the same event, Herb, Homer's double, should come away with different changes. Herb's history differs from Homer's in one stated way that bears on the event, with everything else matched, and the direction it should bend his response is recorded before the run (see [design.md](design.md)). The same-outcome contrast is required for claim 1 to pass; Herb strengthens it.
+   - Given the same event, Herb, Homer's double, should come away with different changes. Herb's history differs from Homer's in one stated way that bears on the event, with everything else matched, and the direction it should bend his response is recorded before the run (see [design.md](https://github.com/jehtee/test-smw-01/blob/main/design.md)). The same-outcome contrast is required for claim 1 to pass; Herb strengthens it.
 2. **Persistence.** The changed priors hold after the perceived event facts can no longer be recalled. A change counts only where recall fails.
 3. **Selectivity: implication, not frequency, wording or mood.** In an LLM, things related by meaning are often related statistically too, so the test situations are ones where the two split. Each names the relationship that links it to the event or, for a look-alike, says that none does. The changes:
    - appear where the event's implications apply, even in different wording and settings (betrayal by an uncle → locking the door, through "people close to me can harm me");

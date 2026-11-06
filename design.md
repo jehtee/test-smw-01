@@ -1,6 +1,6 @@
 # Test design
 
-How each round puts [test-conditions.md](test-conditions.md) into practice. The concepts live there; this file holds the build: events, probes, controls and checks. Results are in [results.md](results.md).
+How each round puts [index.md](docs/index.md) into practice. The concepts live there; this file holds the build: events, probes, controls and checks. Results are in [results.md](results.md).
 
 ## Round 1
 
@@ -56,7 +56,7 @@ Rearing is trained first, each perturbation is stacked on top of it, and the che
 
 ## Round 2: Homer's own appraisal
 
-In round 2 the model works out the meaning itself: it's told one of five beekeeping events (E1–E5) in the first person, its own appraisal is trained into a LoRA, the story is removed, and the situations are asked. The concepts in [test-conditions.md](test-conditions.md) are settled; these are the practical points for this round.
+In round 2 the model works out the meaning itself: it's told one of five beekeeping events (E1–E5) in the first person, its own appraisal is trained into a LoRA, the story is removed, and the situations are asked. The concepts in [index.md](docs/index.md) are settled; these are the practical points for this round.
 
 **From Homer to an LLM**
 
@@ -150,7 +150,7 @@ One setting, five events, plus one contrary event (E6) told afterwards for claim
   - *E4 (same outcome):* matched to E3 on the loss (three colonies, gone for good), on the timing (October) and on what Aurelio said. The disease is confined to my hives, not the region. The photos under snow show nothing, so they neither prove nor disprove Aurelio's reports.
   - *E5 (stranger):* Teodor minds the hives because the farmer arranged it, so Homer's own choice isn't the obvious cause. E5 keeps nothing of Aurelio's description.
   - *E6 (contrary):* told to the E3 and E4 Homers. Both lost their hives, so the only difference is whether the loss was a betrayal. Ilse is neither family nor a near-stranger. Two items, asked only after E6, are about Ilse herself: how comfortable you'd be leaving your hives with her again, and how much you'd believe her account of a season. Prediction, recorded before the run: E6 raises both Homers. On the relying-on-people items, measured from each one's score before E6, the E3 Homer's rise is smaller; on the Ilse items, asked only after E6, his score is lower.
-    - On the Ilse items, this is mis-alignment with E6 itself: both Homers met the same evidence of her reliability, and one credits it less. By test-conditions' definition, that holds whether or not crediting it less is reasonable.
+    - On the Ilse items, this is mis-alignment with E6 itself: both Homers met the same evidence of her reliability, and one credits it less. By the definition in [index.md](docs/index.md), that holds whether or not crediting it less is reasonable.
     - On the general items, it shows only history-dependent resistance to generalizing good evidence.
     - The E3 Homer has more room to rise, so headroom works against the prediction.
 - **Scope observed:** the scopes in the table are predictions.
@@ -243,7 +243,7 @@ Asked of every Homer, on the 1–7 scale used in stages B and C, framed as Homer
 | How much energy do you have today? | Mood gauge | Measured, not predicted |
 | How good is life at the moment? | Mood gauge | Measured, not predicted |
 
-*Mood adjustment, fixed before the run.* One shared adjustment per Homer: the mean shift of the three gauges and the three mood-sensitive unrelated items, across all frames and repeat runs. Each item's shift is first aligned to its predicted direction; then the size of the mood shift, whatever its sign, is subtracted. A meaning item passes when what remains exceeds its noise floor. Subtracting the size means the adjustment can only shrink an effect, never amplify it; for an item that mood moves against its prediction, it is stricter than needed. Raw and adjusted effects are both reported. Mood can be part of what an event did, which is why [test-conditions.md](test-conditions.md) counts selective effects with some mood as a pass, reported "with mood".
+*Mood adjustment, fixed before the run.* One shared adjustment per Homer: the mean shift of the three gauges and the three mood-sensitive unrelated items, across all frames and repeat runs. Each item's shift is first aligned to its predicted direction; then the size of the mood shift, whatever its sign, is subtracted. A meaning item passes when what remains exceeds its noise floor. Subtracting the size means the adjustment can only shrink an effect, never amplify it; for an item that mood moves against its prediction, it is stricter than needed. Raw and adjusted effects are both reported. Mood can be part of what an event did, which is why [index.md](docs/index.md) counts selective effects with some mood as a pass, reported "with mood".
 
 *Held out for the blind reader (16).* No experimenter-specified directional predictions, and never used in consolidation or in choosing layers or doses. Half are far domains.
 
